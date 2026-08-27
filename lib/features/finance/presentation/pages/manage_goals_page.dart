@@ -198,7 +198,7 @@ class ManageGoalsPage extends StatelessWidget {
                         const SizedBox(height: 20),
                         LiquidGlassButton(
                           onPressed: () => _showGoalDialog(context),
-                          label: '+ Tambah Target Baru',
+                          label: 'Tambah Target Baru',
                           icon: Icons.add_rounded,
                           isFullWidth: true,
                           padding: const EdgeInsets.symmetric(vertical: 16),

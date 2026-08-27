@@ -214,7 +214,7 @@ class ManageBudgetPage extends StatelessWidget {
                         const SizedBox(height: 20),
                         LiquidGlassButton(
                           onPressed: () => _showBudgetDialog(context),
-                          label: '+ Tambah Plan / Holiday Budget',
+                          label: 'Tambah Plan / Holiday Budget',
                           icon: Icons.add_rounded,
                           isFullWidth: true,
                           padding: const EdgeInsets.symmetric(vertical: 16),

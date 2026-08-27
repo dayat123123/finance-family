@@ -98,7 +98,7 @@ class LiquidGlassTheme {
       ];
 
   static ThemeData get darkTheme {
-    final baseTextTheme = GoogleFonts.plusJakartaSansTextTheme(
+    TextTheme baseTextTheme = GoogleFonts.plusJakartaSansTextTheme(
       ThemeData(brightness: Brightness.dark).textTheme,
     );
 
