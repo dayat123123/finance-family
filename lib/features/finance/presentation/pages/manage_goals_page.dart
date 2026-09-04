@@ -64,13 +64,15 @@ class ManageGoalsPage extends StatelessWidget {
                   builder: (context, state) {
                     final List<GoalEntity> goals =
                         state is FinanceLoaded ? state.goals : [];
+                    final double currentBalance =
+                        state is FinanceLoaded ? state.currentBalance : 0.0;
 
                     return ListView(
                       physics: const BouncingScrollPhysics(),
                       padding: const EdgeInsets.all(20),
                       children: [
                         Text(
-                          'Daftar Target Tabungan Bersama',
+                          'Daftar Target Tabungan Bersama & Persentase Alokasi',
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.6),
                             fontSize: 12,
@@ -119,86 +121,130 @@ class ManageGoalsPage extends StatelessWidget {
                           )
                         else
                           ...goals.map(
-                            (goal) => Padding(
-                              padding: const EdgeInsets.only(bottom: 10.0),
-                              child: LiquidGlassContainer(
-                                borderRadius: 20,
-                                padding: const EdgeInsets.all(14),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        gradient: LiquidGlassTheme
-                                            .primaryLiquidGradient,
-                                        borderRadius: BorderRadius.circular(14),
+                            (goal) {
+                              final double percent = goal.allocationPercentage > 0
+                                  ? goal.allocationPercentage
+                                  : (goals.isNotEmpty
+                                      ? 100.0 / goals.length
+                                      : 0.0);
+                              final double allocatedAmount =
+                                  currentBalance * (percent / 100.0);
+
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 10.0),
+                                child: LiquidGlassContainer(
+                                  borderRadius: 20,
+                                  padding: const EdgeInsets.all(14),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          gradient: LiquidGlassTheme
+                                              .primaryLiquidGradient,
+                                          borderRadius: BorderRadius.circular(14),
+                                        ),
+                                        child: const Icon(
+                                          Icons.flag_rounded,
+                                          color: Colors.white,
+                                          size: 18,
+                                        ),
                                       ),
-                                      child: const Icon(
-                                        Icons.flag_rounded,
-                                        color: Colors.white,
-                                        size: 18,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            goal.title,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w800,
-                                              fontSize: 14,
-                                              color: Colors.white,
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    goal.title,
+                                                    style: const TextStyle(
+                                                      fontWeight: FontWeight.w800,
+                                                      fontSize: 14,
+                                                      color: Colors.white,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: LiquidGlassTheme
+                                                        .primaryViolet
+                                                        .withValues(alpha: 0.2),
+                                                    borderRadius:
+                                                        BorderRadius.circular(8),
+                                                    border: Border.all(
+                                                      color: LiquidGlassTheme
+                                                          .primaryVioletLight
+                                                          .withValues(alpha: 0.4),
+                                                    ),
+                                                  ),
+                                                  child: Text(
+                                                    '${percent.toStringAsFixed(0)}% Saldo',
+                                                    style: const TextStyle(
+                                                      color: LiquidGlassTheme
+                                                          .primaryVioletLight,
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.w800,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
                                             ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          const SizedBox(height: 3),
-                                          FittedBox(
-                                            fit: BoxFit.scaleDown,
-                                            alignment: Alignment.centerLeft,
-                                            child: Text(
-                                              'Target: ${format.format(goal.targetAmount)}',
-                                              style: TextStyle(
-                                                color: Colors.white
-                                                    .withValues(alpha: 0.6),
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w500,
+                                            const SizedBox(height: 3),
+                                            FittedBox(
+                                              fit: BoxFit.scaleDown,
+                                              alignment: Alignment.centerLeft,
+                                              child: Text(
+                                                'Alokasi: ${format.format(allocatedAmount)} | Target: ${format.format(goal.targetAmount)}',
+                                                style: TextStyle(
+                                                  color: Colors.white
+                                                      .withValues(alpha: 0.6),
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                    LiquidGlassIconButton(
-                                      size: 34,
-                                      icon: Icons.edit_rounded,
-                                      iconColor: Colors.white70,
-                                      onPressed: () =>
-                                          _showGoalDialog(context, goal: goal),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    LiquidGlassIconButton(
-                                      size: 34,
-                                      icon: Icons.delete_outline_rounded,
-                                      iconColor: LiquidGlassTheme.defisitRose,
-                                      onPressed: () {
-                                        context
-                                            .read<FinanceBloc>()
-                                            .add(DeleteGoalEvent(goal.id));
-                                      },
-                                    ),
-                                  ],
+                                      const SizedBox(width: 6),
+                                      LiquidGlassIconButton(
+                                        size: 34,
+                                        icon: Icons.edit_rounded,
+                                        iconColor: Colors.white70,
+                                        onPressed: () => _showGoalDialog(context,
+                                            goal: goal),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      LiquidGlassIconButton(
+                                        size: 34,
+                                        icon: Icons.delete_outline_rounded,
+                                        iconColor: LiquidGlassTheme.defisitRose,
+                                        onPressed: () {
+                                          context
+                                              .read<FinanceBloc>()
+                                              .add(DeleteGoalEvent(goal.id));
+                                        },
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ),
+                              );
+                            },
                           ),
                         const SizedBox(height: 20),
                         LiquidGlassButton(
                           onPressed: () => _showGoalDialog(context),
-                          label: 'Tambah Target Baru',
+                          label: '+ Tambah Target Baru',
                           icon: Icons.add_rounded,
                           isFullWidth: true,
                           padding: const EdgeInsets.symmetric(vertical: 16),
@@ -226,14 +272,16 @@ class ManageGoalsPage extends StatelessWidget {
     final amountController = TextEditingController(
       text: goal != null ? numFormat.format(goal.targetAmount).trim() : '',
     );
+    double selectedPercentage = goal?.allocationPercentage ?? 50.0;
+    if (selectedPercentage <= 0) selectedPercentage = 50.0;
 
     final suggestions = [
-      {'name': '🏠 Beli Rumah', 'target': '500000000'},
-      {'name': '🚗 Mobil Keluarga', 'target': '200000000'},
-      {'name': '🏖️ Liburan Impian', 'target': '25000000'},
-      {'name': '🎓 Pendidikan Anak', 'target': '100000000'},
-      {'name': '🛡️ Dana Darurat', 'target': '50000000'},
-      {'name': '💍 Tabungan Nikah', 'target': '60000000'},
+      {'name': '🏠 Beli Rumah (DP)', 'target': '100000000', 'percent': 80.0},
+      {'name': '🚗 Mobil Keluarga', 'target': '200000000', 'percent': 50.0},
+      {'name': '🏖️ Liburan Impian', 'target': '25000000', 'percent': 20.0},
+      {'name': '🎓 Pendidikan Anak', 'target': '100000000', 'percent': 30.0},
+      {'name': '🛡️ Dana Darurat', 'target': '50000000', 'percent': 40.0},
+      {'name': '💍 Tabungan Nikah', 'target': '60000000', 'percent': 50.0},
     ];
 
     final quickAmounts = [
@@ -242,6 +290,8 @@ class ManageGoalsPage extends StatelessWidget {
       {'label': '+50 Jt', 'val': 50000000},
       {'label': '+100 Jt', 'val': 100000000},
     ];
+
+    final percentagePresets = [10.0, 20.0, 30.0, 50.0, 70.0, 80.0, 100.0];
 
     showDialog(
       context: context,
@@ -255,8 +305,8 @@ class ManageGoalsPage extends StatelessWidget {
               title:
                   goal == null ? 'Target Finansial Baru' : 'Edit Target Impian',
               subtitle: goal == null
-                  ? 'Tentukan target tabungan masa depan keluarga'
-                  : 'Perbarui nominal atau nama impian',
+                  ? 'Tentukan target tabungan & porsi alokasi dana dari saldo'
+                  : 'Perbarui nominal atau alokasi persentase',
               content: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -278,13 +328,15 @@ class ManageGoalsPage extends StatelessWidget {
                     children: suggestions.map((s) {
                       final isSelected = titleController.text == s['name'];
                       return LiquidQuickChip(
-                        label: s['name']!,
+                        label: s['name'] as String,
                         isSelected: isSelected,
                         onTap: () {
                           setStateDialog(() {
-                            titleController.text = s['name']!;
+                            titleController.text = s['name'] as String;
+                            selectedPercentage = s['percent'] as double;
                             if (amountController.text.isEmpty) {
-                              final numVal = double.tryParse(s['target']!) ?? 0;
+                              final numVal =
+                                  double.tryParse(s['target'] as String) ?? 0;
                               amountController.text =
                                   numFormat.format(numVal).trim();
                             }
@@ -359,7 +411,7 @@ class ManageGoalsPage extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
 
                   // Quick Amount Chips
                   SingleChildScrollView(
@@ -380,6 +432,87 @@ class ManageGoalsPage extends StatelessWidget {
                               setStateDialog(() {
                                 amountController.text =
                                     numFormat.format(next).trim();
+                              });
+                            },
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Persentase Alokasi Saldo
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'ALOKASI DARI SALDO AKTIF',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.5),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          gradient: LiquidGlassTheme.primaryLiquidGradient,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '${selectedPercentage.toStringAsFixed(0)}%',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Slider Persentase
+                  SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      activeTrackColor: LiquidGlassTheme.primaryVioletLight,
+                      inactiveTrackColor: Colors.white12,
+                      thumbColor: Colors.white,
+                      overlayColor:
+                          LiquidGlassTheme.primaryViolet.withValues(alpha: 0.2),
+                      trackHeight: 6,
+                    ),
+                    child: Slider(
+                      value: selectedPercentage,
+                      min: 5,
+                      max: 100,
+                      divisions: 19,
+                      onChanged: (val) {
+                        setStateDialog(() {
+                          selectedPercentage = val;
+                        });
+                      },
+                    ),
+                  ),
+
+                  // Quick Percentage Preset Chips
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    child: Row(
+                      children: percentagePresets.map((pct) {
+                        final isSel = selectedPercentage == pct;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 6.0),
+                          child: LiquidQuickChip(
+                            label: '${pct.toStringAsFixed(0)}%',
+                            isSelected: isSel,
+                            activeColor: LiquidGlassTheme.primaryVioletLight,
+                            onTap: () {
+                              setStateDialog(() {
+                                selectedPercentage = pct;
                               });
                             },
                           ),
@@ -418,6 +551,7 @@ class ManageGoalsPage extends StatelessWidget {
                           id: const Uuid().v4(),
                           title: title,
                           targetAmount: amount,
+                          allocationPercentage: selectedPercentage,
                         );
                         context.read<FinanceBloc>().add(AddGoalEvent(newGoal));
                       } else {
@@ -425,6 +559,7 @@ class ManageGoalsPage extends StatelessWidget {
                           id: goal.id,
                           title: title,
                           targetAmount: amount,
+                          allocationPercentage: selectedPercentage,
                         );
                         context.read<FinanceBloc>().add(EditGoalEvent(updated));
                       }

@@ -67,6 +67,10 @@ class _DashboardPageState extends State<DashboardPage> {
                           const SizedBox(height: 28),
                           _buildGoalsSection(context, state, format),
                           const SizedBox(height: 28),
+                          if (state.monthlyExpense > 0) ...[
+                            _buildWeeklyExpenseSummary(state, format),
+                            const SizedBox(height: 28),
+                          ],
                           _buildBudgetPlansSection(context, state, format),
                           const SizedBox(height: 28),
                           if (state.monthlyExpense > 0) ...[
@@ -870,8 +874,6 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget _buildGoalsSection(
       BuildContext context, FinanceLoaded state, NumberFormat format) {
     final totalGoals = state.goals.length;
-    double allocatedPerGoal =
-        totalGoals > 0 ? state.currentBalance / totalGoals : 0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -941,9 +943,14 @@ class _DashboardPageState extends State<DashboardPage> {
           )
         else
           ...state.goals.map((goal) {
-            double assignedAmount = allocatedPerGoal > goal.targetAmount
-                ? goal.targetAmount
-                : allocatedPerGoal;
+            final double percent = goal.allocationPercentage > 0
+                ? goal.allocationPercentage
+                : (totalGoals > 0 ? 100.0 / totalGoals : 0.0);
+
+            double assignedAmount = state.currentBalance * (percent / 100.0);
+            if (assignedAmount > goal.targetAmount) {
+              assignedAmount = goal.targetAmount;
+            }
             double progress =
                 (assignedAmount / goal.targetAmount).clamp(0.0, 1.0);
 
@@ -976,15 +983,30 @@ class _DashboardPageState extends State<DashboardPage> {
                               ),
                               const SizedBox(width: 10),
                               Expanded(
-                                child: Text(
-                                  goal.title,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 14,
-                                    color: Colors.white,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      goal.title,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 14,
+                                        color: Colors.white,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      'Alokasi ${percent.toStringAsFixed(0)}% dari saldo',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: LiquidGlassTheme
+                                            .primaryVioletLight
+                                            .withValues(alpha: 0.85),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
@@ -1035,6 +1057,212 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
             );
           }),
+      ],
+    );
+  }
+
+  /// FEATURE: Summary Pengeluaran Mingguan Tiap Bulan
+  Widget _buildWeeklyExpenseSummary(FinanceLoaded state, NumberFormat format) {
+    final expenses = state.monthlyTransactions
+        .where((t) => t.type == TransactionType.expense)
+        .toList();
+
+    final Map<int, List<TransactionEntity>> weekMap = {
+      1: [],
+      2: [],
+      3: [],
+      4: [],
+      5: [],
+    };
+
+    for (var tx in expenses) {
+      final day = tx.date.day;
+      if (day <= 7) {
+        weekMap[1]!.add(tx);
+      } else if (day <= 14) {
+        weekMap[2]!.add(tx);
+      } else if (day <= 21) {
+        weekMap[3]!.add(tx);
+      } else if (day <= 28) {
+        weekMap[4]!.add(tx);
+      } else {
+        weekMap[5]!.add(tx);
+      }
+    }
+
+    final int daysInMonth =
+        DateTime(state.selectedMonth.year, state.selectedMonth.month + 1, 0)
+            .day;
+    final int activeWeeks = daysInMonth > 28 ? 5 : 4;
+
+    int maxWeek = 1;
+    double maxAmount = 0;
+    for (int w = 1; w <= activeWeeks; w++) {
+      final total = weekMap[w]!.fold(0.0, (sum, tx) => sum + tx.amount);
+      if (total > maxAmount) {
+        maxAmount = total;
+        maxWeek = w;
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle(
+          'Summary Pengeluaran Mingguan',
+          icon: Icons.calendar_view_week_rounded,
+          iconColor: LiquidGlassTheme.amberWarning,
+          trailing: Text(
+            DateFormat('MMMM yyyy', 'id_ID').format(state.selectedMonth),
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.5),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        LiquidGlassContainer(
+          borderRadius: 24,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: List.generate(activeWeeks, (index) {
+              final weekNum = index + 1;
+              final list = weekMap[weekNum]!;
+              final weekTotal = list.fold(0.0, (sum, tx) => sum + tx.amount);
+              final ratio = state.monthlyExpense > 0
+                  ? (weekTotal / state.monthlyExpense).clamp(0.0, 1.0)
+                  : 0.0;
+              final isMax =
+                  maxAmount > 0 && weekNum == maxWeek && weekTotal > 0;
+
+              String dateRange;
+              if (weekNum == 1) {
+                dateRange = '1 - 7';
+              } else if (weekNum == 2) {
+                dateRange = '8 - 14';
+              } else if (weekNum == 3) {
+                dateRange = '15 - 21';
+              } else if (weekNum == 4) {
+                dateRange = '22 - 28';
+              } else {
+                dateRange = '29 - $daysInMonth';
+              }
+
+              return Padding(
+                padding: EdgeInsets.only(
+                    bottom: index == activeWeeks - 1 ? 0.0 : 14.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: isMax
+                                    ? LiquidGlassTheme.defisitRose
+                                        .withValues(alpha: 0.2)
+                                    : Colors.white.withValues(alpha: 0.06),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: isMax
+                                      ? LiquidGlassTheme.defisitRose
+                                          .withValues(alpha: 0.5)
+                                      : Colors.white.withValues(alpha: 0.1),
+                                ),
+                              ),
+                              child: Text(
+                                'Minggu $weekNum ($dateRange)',
+                                style: TextStyle(
+                                  color: isMax
+                                      ? LiquidGlassTheme.defisitRoseLight
+                                      : Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                            if (isMax) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: LiquidGlassTheme.defisitRose
+                                      .withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text(
+                                  '🔥 Terbanyak',
+                                  style: TextStyle(
+                                    color: LiquidGlassTheme.defisitRoseLight,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        Text(
+                          format.format(weekTotal),
+                          style: TextStyle(
+                            color: weekTotal > 0
+                                ? (isMax
+                                    ? LiquidGlassTheme.defisitRoseLight
+                                    : Colors.white)
+                                : Colors.white.withValues(alpha: 0.4),
+                            fontWeight: FontWeight.w800,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    LiquidProgressBar(
+                      value: ratio,
+                      height: 6,
+                      gradient: isMax
+                          ? LiquidGlassTheme.defisitLiquidGradient
+                          : LinearGradient(
+                              colors: [
+                                LiquidGlassTheme.secondaryCyan,
+                                LiquidGlassTheme.primaryViolet,
+                              ],
+                            ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '${list.length} transaksi',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.white.withValues(alpha: 0.45),
+                          ),
+                        ),
+                        Text(
+                          '${(ratio * 100).toStringAsFixed(1)}% dari total pengeluaran',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.white.withValues(alpha: 0.6),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ),
+        ),
       ],
     );
   }
