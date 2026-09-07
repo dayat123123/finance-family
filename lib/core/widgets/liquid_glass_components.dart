@@ -481,6 +481,7 @@ class LiquidGlassBadge extends StatelessWidget {
   final IconData? icon;
   final bool isGlowing;
   final EdgeInsetsGeometry padding;
+  final double? fontSize;
 
   const LiquidGlassBadge({
     super.key,
@@ -489,6 +490,7 @@ class LiquidGlassBadge extends StatelessWidget {
     this.icon,
     this.isGlowing = false,
     this.padding = const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+    this.fontSize,
   });
 
   @override
@@ -540,7 +542,7 @@ class LiquidGlassBadge extends StatelessWidget {
               label,
               style: TextStyle(
                 color: color,
-                fontSize: 11,
+                fontSize: fontSize ?? 11,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.1,
               ),

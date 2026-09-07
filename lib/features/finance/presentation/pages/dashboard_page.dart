@@ -10,6 +10,7 @@ import 'add_transaction_page.dart';
 import 'transaction_detail_page.dart';
 import 'manage_goals_page.dart';
 import 'manage_budget_page.dart';
+import 'weekly_expense_detail_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -1090,9 +1091,12 @@ class _DashboardPageState extends State<DashboardPage> {
       }
     }
 
-    final int daysInMonth =
-        DateTime(state.selectedMonth.year, state.selectedMonth.month + 1, 0)
-            .day;
+    final int year = state.selectedMonth.year;
+    final int month = state.selectedMonth.month;
+    // Real-world exact number of days for this specific month & year (including leap years)
+    final int daysInMonth = DateTime(year, month + 1, 0).day;
+    final String monthAbbr =
+        DateFormat('MMM', 'id_ID').format(state.selectedMonth);
     final int activeWeeks = daysInMonth > 28 ? 5 : 4;
 
     int maxWeek = 1;
@@ -1113,7 +1117,7 @@ class _DashboardPageState extends State<DashboardPage> {
           icon: Icons.calendar_view_week_rounded,
           iconColor: LiquidGlassTheme.amberWarning,
           trailing: Text(
-            DateFormat('MMMM yyyy', 'id_ID').format(state.selectedMonth),
+            '${DateFormat('MMMM yyyy', 'id_ID').format(state.selectedMonth)} ($daysInMonth Hari)',
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.5),
               fontSize: 12,
@@ -1136,128 +1140,207 @@ class _DashboardPageState extends State<DashboardPage> {
               final isMax =
                   maxAmount > 0 && weekNum == maxWeek && weekTotal > 0;
 
-              String dateRange;
+              int startDay;
+              int endDay;
               if (weekNum == 1) {
-                dateRange = '1 - 7';
+                startDay = 1;
+                endDay = 7;
               } else if (weekNum == 2) {
-                dateRange = '8 - 14';
+                startDay = 8;
+                endDay = 14;
               } else if (weekNum == 3) {
-                dateRange = '15 - 21';
+                startDay = 15;
+                endDay = 21;
               } else if (weekNum == 4) {
-                dateRange = '22 - 28';
+                startDay = 22;
+                endDay = 28;
               } else {
-                dateRange = '29 - $daysInMonth';
+                startDay = 29;
+                endDay = daysInMonth;
+              }
+
+              final startDate = DateTime(year, month, startDay);
+              final endDate = DateTime(year, month, endDay);
+              final String startDayName =
+                  DateFormat('EEE', 'id_ID').format(startDate);
+              final String endDayName =
+                  DateFormat('EEE', 'id_ID').format(endDate);
+
+              String dateRange;
+              if (startDay == endDay) {
+                dateRange = '$startDayName, $startDay $monthAbbr';
+              } else {
+                dateRange =
+                    '$startDayName, $startDay - $endDayName, $endDay $monthAbbr';
               }
 
               return Padding(
                 padding: EdgeInsets.only(
                     bottom: index == activeWeeks - 1 ? 0.0 : 14.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => BlocProvider.value(
+                          value: context.read<FinanceBloc>(),
+                          child: WeeklyExpenseDetailPage(
+                            weekNum: weekNum,
+                            startDate: startDate,
+                            endDate: endDate,
+                            selectedMonth: state.selectedMonth,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    color: Colors.transparent,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: isMax
-                                    ? LiquidGlassTheme.defisitRose
-                                        .withValues(alpha: 0.2)
-                                    : Colors.white.withValues(alpha: 0.06),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: isMax
-                                      ? LiquidGlassTheme.defisitRose
-                                          .withValues(alpha: 0.5)
-                                      : Colors.white.withValues(alpha: 0.1),
-                                ),
-                              ),
-                              child: Text(
-                                'Minggu $weekNum ($dateRange)',
-                                style: TextStyle(
-                                  color: isMax
-                                      ? LiquidGlassTheme.defisitRoseLight
-                                      : Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                ),
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Flexible(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: isMax
+                                            ? LiquidGlassTheme.defisitRose
+                                                .withValues(alpha: 0.2)
+                                            : Colors.white
+                                                .withValues(alpha: 0.06),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: isMax
+                                              ? LiquidGlassTheme.defisitRose
+                                                  .withValues(alpha: 0.5)
+                                              : Colors.white
+                                                  .withValues(alpha: 0.1),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'Minggu $weekNum ($dateRange)',
+                                        style: TextStyle(
+                                          color: isMax
+                                              ? LiquidGlassTheme
+                                                  .defisitRoseLight
+                                              : Colors.white,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ),
+                                  if (isMax) ...[
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: LiquidGlassTheme.defisitRose
+                                            .withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Text(
+                                        '🔥 Max',
+                                        style: TextStyle(
+                                          color:
+                                              LiquidGlassTheme.defisitRoseLight,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                             ),
-                            if (isMax) ...[
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: LiquidGlassTheme.defisitRose
-                                      .withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: const Text(
-                                  '🔥 Terbanyak',
-                                  style: TextStyle(
-                                    color: LiquidGlassTheme.defisitRoseLight,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
+                            const SizedBox(width: 8),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    format.format(weekTotal),
+                                    style: TextStyle(
+                                      color: weekTotal > 0
+                                          ? (isMax
+                                              ? LiquidGlassTheme
+                                                  .defisitRoseLight
+                                              : Colors.white)
+                                          : Colors.white.withValues(alpha: 0.4),
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 13,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ],
-                        ),
-                        Text(
-                          format.format(weekTotal),
-                          style: TextStyle(
-                            color: weekTotal > 0
-                                ? (isMax
-                                    ? LiquidGlassTheme.defisitRoseLight
-                                    : Colors.white)
-                                : Colors.white.withValues(alpha: 0.4),
-                            fontWeight: FontWeight.w800,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    LiquidProgressBar(
-                      value: ratio,
-                      height: 6,
-                      gradient: isMax
-                          ? LiquidGlassTheme.defisitLiquidGradient
-                          : LinearGradient(
-                              colors: [
-                                LiquidGlassTheme.secondaryCyan,
-                                LiquidGlassTheme.primaryViolet,
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.arrow_forward_ios_rounded,
+                                  size: 10,
+                                  color: Colors.white.withValues(alpha: 0.4),
+                                ),
                               ],
                             ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '${list.length} transaksi',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.white.withValues(alpha: 0.45),
-                          ),
+                          ],
                         ),
-                        Text(
-                          '${(ratio * 100).toStringAsFixed(1)}% dari total pengeluaran',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.white.withValues(alpha: 0.6),
-                            fontWeight: FontWeight.w600,
-                          ),
+                        const SizedBox(height: 8),
+                        LiquidProgressBar(
+                          value: ratio,
+                          height: 6,
+                          gradient: isMax
+                              ? LiquidGlassTheme.defisitLiquidGradient
+                              : const LinearGradient(
+                                  colors: [
+                                    LiquidGlassTheme.secondaryCyan,
+                                    LiquidGlassTheme.primaryViolet,
+                                  ],
+                                ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${list.length} transaksi • Ketuk untuk rincian',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.white.withValues(alpha: 0.45),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                '${(ratio * 100).toStringAsFixed(1)}% pengeluaran',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.white.withValues(alpha: 0.6),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                textAlign: TextAlign.right,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
               );
             }),
@@ -1819,54 +1902,140 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildActionDock(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Inject Saldo Glass Button
-          LiquidGlassIconButton(
-            size: 52,
-            icon: Icons.account_balance_wallet_rounded,
-            tooltip: 'Inject Saldo Awal',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => BlocProvider.value(
-                    value: context.read<FinanceBloc>(),
-                    child: const AddTransactionPage(isInitialBalance: true),
-                  ),
-                ),
-              );
-            },
-          ),
-          const SizedBox(width: 12),
+    return BlocBuilder<FinanceBloc, FinanceState>(
+      builder: (context, state) {
+        if (state is! FinanceLoaded) return const SizedBox();
 
-          // Main Catat Transaksi Button
-          Expanded(
-            child: LiquidGlassButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => BlocProvider.value(
-                      value: context.read<FinanceBloc>(),
-                      child: const AddTransactionPage(),
+        final now = DateTime.now();
+        final isCurrentMonth = state.selectedMonth.year == now.year &&
+            state.selectedMonth.month == now.month;
+
+        // JIKA BUKAN BULAN INI (BULAN LALU ATAU BULAN DEPAN): KUNCI INPUT
+        if (!isCurrentMonth) {
+          final isPast =
+              state.selectedMonth.isBefore(DateTime(now.year, now.month));
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0),
+            child: LiquidGlassContainer(
+              borderRadius: 24,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              borderColor:
+                  LiquidGlassTheme.amberWarning.withValues(alpha: 0.35),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color:
+                          LiquidGlassTheme.amberWarning.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.lock_clock_rounded,
+                      color: LiquidGlassTheme.amberWarning,
+                      size: 18,
                     ),
                   ),
-                );
-              },
-              label: 'Catat Transaksi',
-              icon: Icons.add_rounded,
-              borderRadius: 24,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              gradient: LiquidGlassTheme.primaryLiquidGradient,
-              glowColor: LiquidGlassTheme.primaryViolet,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isPast
+                              ? 'Arsip Bulan Lalu (Terkunci)'
+                              : 'Bulan Depan (Terkunci)',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12,
+                          ),
+                        ),
+                        Text(
+                          'Catat transaksi hanya bisa di bulan berjalan (${DateFormat('MMM yyyy', 'id_ID').format(now)}).',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.55),
+                            fontSize: 10,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  LiquidGlassButton(
+                    onPressed: () {
+                      context
+                          .read<FinanceBloc>()
+                          .add(ChangeMonthEvent(DateTime(now.year, now.month)));
+                    },
+                    label: 'Bulan Ini',
+                    icon: Icons.restore_rounded,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    borderRadius: 16,
+                    gradient: LiquidGlassTheme.primaryLiquidGradient,
+                    glowColor: LiquidGlassTheme.primaryViolet,
+                  ),
+                ],
+              ),
             ),
+          );
+        }
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Inject Saldo Glass Button
+              LiquidGlassIconButton(
+                size: 52,
+                icon: Icons.account_balance_wallet_rounded,
+                tooltip: 'Inject Saldo Awal',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BlocProvider.value(
+                        value: context.read<FinanceBloc>(),
+                        child: const AddTransactionPage(isInitialBalance: true),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(width: 12),
+
+              // Main Catat Transaksi Button
+              Expanded(
+                child: LiquidGlassButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => BlocProvider.value(
+                          value: context.read<FinanceBloc>(),
+                          child: const AddTransactionPage(),
+                        ),
+                      ),
+                    );
+                  },
+                  label: 'Catat Transaksi',
+                  icon: Icons.add_rounded,
+                  borderRadius: 24,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  gradient: LiquidGlassTheme.primaryLiquidGradient,
+                  glowColor: LiquidGlassTheme.primaryViolet,
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
